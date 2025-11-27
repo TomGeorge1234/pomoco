@@ -1,0 +1,3 @@
+[submodule "torch_brain"]
+	path = torch_brain
+	url = https://github.com/TomGeorge1234/torch_brain.git
