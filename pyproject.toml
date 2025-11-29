@@ -5,7 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bokeh>=3.8.1",
     "brainsets",
+    "dandi>=0.73.2",
+    "ipykernel>=7.1.0",
     "pytorch-brain",
     "ratinabox>=1.15.3",
 ]
