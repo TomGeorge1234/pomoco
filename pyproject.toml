@@ -3,12 +3,13 @@ name = "pomoco"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "bokeh>=3.8.1",
     "brainsets",
     "dandi>=0.73.2",
     "ipykernel>=7.1.0",
+    "matplotlib>=3.10.7",
     "pytorch-brain",
     "ratinabox>=1.15.3",
 ]
