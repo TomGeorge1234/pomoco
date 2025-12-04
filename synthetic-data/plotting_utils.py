@@ -5,6 +5,7 @@ from bokeh.io import output_notebook
 from bokeh.layouts import column
 from bokeh.models import ColumnDataSource, RangeTool
 import numpy as np
+import matplotlib.pyplot as plt
 
 from bokeh.models import Button
 from bokeh.models.callbacks import CustomJS
@@ -92,7 +93,7 @@ def plot_multi_time_series(
 ):
     # Create a figure
     if x_range is None:
-        x_range = (data.timestamps[0] * 1e3, data.timestamps[0] * 1e3 + 20_000)
+        x_range = (data.timestamps[0] * 1e3, data.timestamps[0] * 1e3 + 10_000)
 
     if y_axis_label is None:
         y_axis_label = field
@@ -131,10 +132,16 @@ def plot_multi_time_series(
         y_values = y_values[:, np.newaxis]
 
     n_dims = y_values.shape[1]
-
+    # make a colour for each dim from viridis
+    cmap = plt.get_cmap("viridis")
+    colors = [cmap(i / n_dims) for i in range(n_dims)]
+    colors = [
+        f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
+        for r, g, b, a in colors
+    ]
     for dim in range(n_dims):
         source = ColumnDataSource(data=dict(x=x_values, y=y_values[:, dim]))
-        p.line(x="x", y="y", source=source, line_width=2)
+        p.line(x="x", y="y", source=source, line_width=2, color=colors[dim])
 
     x_range = p.x_range
 
@@ -229,8 +236,8 @@ def plot_multi_time_series(
 
 
 def make_plot(data, add_play_controls=False):
-    p_cursor, x_range, button_layout = plot_multi_time_series(
-        data.cursor,
+    p_latent, x_range, button_layout = plot_multi_time_series(
+        data.latent,
         "pos",
         y_axis_label="latent",
     )
@@ -239,7 +246,7 @@ def make_plot(data, add_play_controls=False):
 
     return column(
         button_layout,
-        p_cursor,
+        p_latent,
         p_spikes,
     )
 
@@ -312,10 +319,10 @@ def plot_dandi_data():
 
     data = Data(
         spikes=spikes,
-        cursor=cursor,
+        latent=cursor,
         reach_intervals=reach_intervals,
         domain="auto",
     )
 
     p = make_plot(data, add_play_controls=True)
-    show(p)
+    return p

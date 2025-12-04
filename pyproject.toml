@@ -8,6 +8,7 @@ dependencies = [
     "bokeh>=3.8.1",
     "brainsets",
     "dandi>=0.73.2",
+    "holoviews>=1.22.0",
     "ipykernel>=7.1.0",
     "matplotlib>=3.10.7",
     "pytorch-brain",
