@@ -1,4 +1,4 @@
-from gaussian_process import GaussianProcess
+from synthetic_data.gaussian_process import GaussianProcess
 import numpy as np
 
 
@@ -11,7 +11,6 @@ def generator(
 ):
     # Sample latent variables from Gaussian Process
     time, latents = gaussian_process.sample(T=T, dt=dt)
-    print(np.std(latents))
     # Map to firing rates
     log_firing_rates = latents @ weight_matrix.T  # ReLU activation
     rates = np.exp(log_firing_rates)
@@ -20,9 +19,7 @@ def generator(
 
     # Sample spike counts and times
     lam = rates * dt  # shape: (num_timepoints, num_neurons)
-    print(lam)
     spike_counts = np.random.poisson(lam)  # shape: (num_timepoints, num_neurons)
-    print(f"Spike counts shape is: {spike_counts.shape}")
 
     # Extract individual spike instances 
     t_ids, n_ids = np.nonzero(spike_counts)

@@ -4,3 +4,4 @@ outputs/
 *.nwb
 .vscode/
 __pycache__/
+scratch.ipynb

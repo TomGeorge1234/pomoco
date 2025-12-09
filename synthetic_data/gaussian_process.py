@@ -1,11 +1,15 @@
 import jax
 import jax.numpy as jnp
 import jax.random as random
+import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict, Optional, Tuple, Union, Any
 
 # Assuming KERNELS is a dictionary mapping strings to callables
-from kernels import KERNELS
+from synthetic_data.kernels import KERNELS
+
+
+#TODO change this to a Matern 5/2 OU process for linear time complexity
 
 class GaussianProcess:
     """
@@ -110,118 +114,9 @@ class GaussianProcess:
         # Vectorize interpolation across the dimension axis (axis 1)
         latent = jax.vmap(interp_one_dim, in_axes=1, out_axes=1)(latent_process_samples)
 
-        return time, latent
-    
-
-# A class with identical API as above but using gpytorch for the internals 
-class GaussianProcessGPyTorch:
-    """
-    A class for generating samples from a multi-dimensional Gaussian Process (GP) using GPyTorch.
-
-    This class supports sampling from a GP with a specified kernel, generating samples
-    at a coarse resolution first for efficiency, and then interpolating to a finer
-    resolution.
-
-    Attributes:
-        dim (int): The dimensionality of the Gaussian Process (number of independent traces).
-        kernel_type (str): The name of the kernel function to use (must be in KERNELS).
-        kernel_params (Dict[str, Any]): Parameters passed to the kernel function (e.g., length scale).
-        kernel_func (Callable): The actual kernel function retrieved from KERNELS.
-    """
-
-    def __init__(
-        self, 
-        dim: int, 
-        kernel_type: str = "rbf", 
-        kernel_params: Optional[Dict[str, float]] = None
-    ) -> None:
-        """
-        Initializes the GaussianProcessGPyTorch generator.
-
-        Args:
-            dim: The number of independent dimensions to sample.
-            kernel_type: The key for the kernel in the KERNELS dictionary. Defaults to "rbf".
-            kernel_params: A dictionary of parameters for the kernel function. 
-                           Defaults to an empty dict if None.
-
-        Raises:
-            ValueError: If the provided kernel_type is not found in KERNELS.
-        """
-        self.dim = dim
-        self.kernel_type = kernel_type
-        self.kernel_params = kernel_params if kernel_params is not None else {}
-
-        if self.kernel_type not in KERNELS:
-            raise ValueError(
-                f"Kernel type '{self.kernel_type}' not found. "
-                f"Available kernels: {list(KERNELS.keys())}"
-            )
-
-        self.kernel_func = KERNELS[self.kernel_type]
-
-    def sample(
-        self, 
-        T: float, 
-        dt: float, 
-        dt_sample: Optional[float] = None, 
-        seed: int = 0
-    ) -> Tuple[Any, Any]:
-        """
-        Samples trajectories from the Gaussian Process using GPyTorch.
-
-        This method first samples the GP at a coarser time resolution (`dt_sample`) 
-        to reduce the computational cost of the covariance matrix decomposition, 
-        and then linearly interpolates the result to the target resolution (`dt`).
-
-        Args:
-            T: The total duration of the simulation in seconds.
-            dt: The target time step for the output array.  
-            dt_sample: The time step used for the internal covariance sampling. 
-                       If None, defaults to `dt`. Larger values are faster but less accurate.
-            seed: Random seed for reproducibility.
-        Returns:
-            A tuple containing:
-                - time (jax.Array): Time vector of shape (num_steps,).
-                - latent (jax.Array): Sampled GP trajectories of shape (num_steps, dim).
-        """
-        import torch
-        import gpytorch
-        from gpytorch.distributions import MultivariateNormal
-
-        torch.manual_seed(seed)
-
-        dt_sample = dt_sample or dt
-        num_samples = int(T / dt_sample) + 1
-        time_sample = torch.linspace(0, T, num_samples)
-
-        # Compute covariance matrix using the kernel function
-        # Shape: (num_samples, num_samples)
-        cov_matrix = self.kernel_func(time_sample.numpy(), time_sample.numpy(), self.kernel_params)
-        cov_matrix += torch.eye(num_samples) * 1e-4 # Jitter for stability
-        mean = torch.zeros(num_samples)
-
-        def sample_one_dim() -> torch.Tensor:
-            """Helper to sample one dimension."""
-            mvn = MultivariateNormal(mean, cov_matrix)
-            return mvn.sample()
-
-        # Sample each dimension independently
-        latent_process_samples = torch.stack([sample_one_dim() for _ in range(self.dim)], dim=1)
-
-        # Interpolate to the target time base
-        num_steps = int(T / dt) + 1
-        time = torch.linspace(0, T, num_steps)
-
-        def interp_one_dim(y: torch.Tensor) -> torch.Tensor:
-            """Helper to interpolate one dimension to the target time base."""
-            return torch.from_numpy(
-                np.interp(time.numpy(), time_sample.numpy(), y.numpy())
-            )
-
-        latent = torch.stack(
-            [interp_one_dim(latent_process_samples[:, i]) for i in range(self.dim)],
-            dim=1
-        )
+        # convert to numpy for downstream compatibility
+        time = np.array(time)
+        latent = np.array(latent)
 
         return time, latent
 
