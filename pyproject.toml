@@ -10,6 +10,7 @@ dependencies = [
     "dandi>=0.73.2",
     "holoviews>=1.22.0",
     "ipykernel>=7.1.0",
+    "jax>=0.8.1",
     "matplotlib>=3.10.7",
     "pytorch-brain",
     "ratinabox>=1.15.3",
