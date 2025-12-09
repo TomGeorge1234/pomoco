@@ -1,0 +1,10 @@
+data:
+  num_sets: 100 
+  latent_dim: 5
+  latent_timescale: 0.5
+  num_neurons: 50
+  max_firing_rate: 20.0
+  trial_duration: 2.0
+  dt: 0.01
+
+
