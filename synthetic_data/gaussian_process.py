@@ -1,6 +1,6 @@
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple
 import numpy as np
-from kernels import KERNELS
+from synthetic_data.kernels import KERNELS
 
 class GaussianProcess:
     """
