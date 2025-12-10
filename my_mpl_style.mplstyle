@@ -13,6 +13,8 @@ axes.spines.top: False
 xtick.direction: out
 ytick.direction: out
 axes.linewidth: 0.8
+xtick.major.size: 4
+ytick.major.size: 4
 
 # --- 3. Zero-Axis Highlight ---
 axes.grid: True

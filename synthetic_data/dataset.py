@@ -1,6 +1,6 @@
 import torch
 from typing import Optional
-from synthetic_data.generator import generator
+from synthetic_data.synthetic_data_generator import generator
 import numpy as np
 
 
