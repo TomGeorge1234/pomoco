@@ -1,0 +1,39 @@
+# A clean, pastel-themed Matplotlib style sheet.
+
+# --- 1. Pastel Color Palette ---
+axes.prop_cycle: cycler('color', ["ff595e","ffca3a","8ac926","1982c4","6a4c93", "ff8fa3","ffe066","a8e6cf","4dabf7","9f86c0"])
+
+
+# --- 2. Backed-Off Axes & Visible Spines (UPDATED) ---
+# Hide the Top and Right spines
+axes.spines.right: False
+axes.spines.top: False
+
+# 'out' direction ensures the ticks (and the spine if padded) are offset from the data
+xtick.direction: out
+ytick.direction: out
+axes.linewidth: 0.8
+
+# --- 3. Zero-Axis Highlight ---
+axes.grid: True
+grid.color: e5e5e5
+grid.linewidth: 0.5
+grid.linestyle: -
+
+# Heavier Tick Marks
+xtick.major.width: 1.0
+ytick.major.width: 1.0
+
+xtick.color: 444444
+ytick.color: 444444
+axes.edgecolor: 444444
+
+# --- 4. General Aesthetics ---
+font.size: 9.0
+figure.figsize: 6.0, 4.0
+figure.facecolor: none
+axes.facecolor: none
+axes.titlesize: 9.0            # Default font size for plot titles
+axes.labelsize: 7.0             # Default font size for axis labels (x and y)
+xtick.labelsize: 7.0            # Font size for X-tick labels (numbers/text on the axis)
+ytick.labelsize: 7.0            # Font size for Y-tick labels

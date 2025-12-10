@@ -15,6 +15,7 @@ class Dataset(torch.utils.data.IterableDataset):
         num_neurons=100,
         max_firing_rate=50,
         trial_duration=2.0,
+        dt=0.1,
     ):
         super().__init__()
 
@@ -24,9 +25,10 @@ class Dataset(torch.utils.data.IterableDataset):
         self.num_neurons = num_neurons
         self.max_firing_rate = max_firing_rate
         self.trial_duration = trial_duration
+        self.dt = dt
 
         self.dataset_weight_dict = {
-            i: self.get_weight_matrix(self.num_neurons, self.latent_dim)
+            i: self.create_weight_matrix(self.num_neurons, self.latent_dim)
             for i in range(self.num_sets)
         }
 
@@ -44,7 +46,7 @@ class Dataset(torch.utils.data.IterableDataset):
                 latent_dim=self.latent_dim,
                 latent_timescale=self.latent_timescale,
                 trial_duration=self.trial_duration,
-                dt=0.01,
+                dt=self.dt,
                 max_fr=self.max_firing_rate,
             )
             yield {
@@ -53,7 +55,7 @@ class Dataset(torch.utils.data.IterableDataset):
                 "spike_counts": torch.from_numpy(spike_counts).float(),
             }
 
-    def get_weight_matrix(self, num_neurons, latent_dim):
+    def create_weight_matrix(self, num_neurons, latent_dim):
         weight_matrix = np.random.randn(num_neurons, latent_dim)
         weight_matrix = weight_matrix / np.sqrt(latent_dim)
         return weight_matrix
