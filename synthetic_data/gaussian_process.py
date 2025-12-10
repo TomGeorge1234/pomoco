@@ -1,15 +1,12 @@
+from typing import Dict, Optional, Tuple, Any, Callable
 import jax
 import jax.numpy as jnp
 import jax.random as random
 import numpy as np
-import matplotlib.pyplot as plt
-from typing import Dict, Optional, Tuple, Union, Any
-
-# Assuming KERNELS is a dictionary mapping strings to callables
 from synthetic_data.kernels import KERNELS
 
-
 #TODO change this to a Matern 5/2 OU process for linear time complexity
+#TODO write this in numpy or pytorch for easier downstream use
 
 class GaussianProcess:
     """

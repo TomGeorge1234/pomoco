@@ -4,13 +4,22 @@ import numpy as np
 
 def generator(
     weight_matrix,
-    gaussian_process: GaussianProcess,
-    T=2.0,
+    latent_dim=10,
+    latent_timescale=1.0,
+    trial_duration=2.0,
     dt=0.1,
     max_fr=100.0,
-):
+    return_spike_counts=True, 
+    ):
+ 
+    # Make the Gaussian Process
+    gaussian_process = GaussianProcess(
+        kernel_type="rbf",
+        dim=latent_dim, 
+        kernel_params={"tau": latent_timescale})
+    
     # Sample latent variables from Gaussian Process
-    time, latents = gaussian_process.sample(T=T, dt=dt)
+    time, latents = gaussian_process.sample(T=trial_duration, dt=dt)
     # Map to firing rates
     log_firing_rates = latents @ weight_matrix.T  # ReLU activation
     rates = np.exp(log_firing_rates)
@@ -21,15 +30,19 @@ def generator(
     lam = rates * dt  # shape: (num_timepoints, num_neurons)
     spike_counts = np.random.poisson(lam)  # shape: (num_timepoints, num_neurons)
 
-    # Extract individual spike instances 
-    t_ids, n_ids = np.nonzero(spike_counts)
-    counts_for_nonzero_bins = spike_counts[t_ids, n_ids]
+    if return_spike_counts:
+        return time, latents, spike_counts
+    
+    else: 
+        # Extract sample individual spikes; return times and unit ids
+        t_ids, n_ids = np.nonzero(spike_counts)
+        counts_for_nonzero_bins = spike_counts[t_ids, n_ids]
 
-    spike_unit_ids = np.repeat(n_ids, counts_for_nonzero_bins)
-    base_spike_times = np.repeat(time[t_ids], counts_for_nonzero_bins)
-    spike_times = base_spike_times + np.random.uniform(0, dt, size=base_spike_times.shape)
+        spike_unit_ids = np.repeat(n_ids, counts_for_nonzero_bins)
+        base_spike_times = np.repeat(time[t_ids], counts_for_nonzero_bins)
+        spike_times = base_spike_times + np.random.uniform(0, dt, size=base_spike_times.shape)
 
-    return spike_times, spike_unit_ids, time, latents
+    return time, latents, spike_times, spike_unit_ids
 
 
 if __name__ == "__main__":
