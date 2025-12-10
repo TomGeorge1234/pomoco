@@ -1,1 +1,0 @@
-A slimmed down instantiation of POYO for synthetically generated data. 
