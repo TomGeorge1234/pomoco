@@ -23,6 +23,9 @@ class GaussianProcessSpikeCount(Generator):
         
         if weights is not None: 
             assert weights.shape = (latent_dim, num_neurons)
+            self.weights = weights
+        else: 
+            weights = self.create_weight_matrix(num_neurons, latent_dim)
 
         self.max_firing_rate = max_firing_rate
         self.non_linearity = non_linearity
@@ -32,7 +35,29 @@ class GaussianProcessSpikeCount(Generator):
         else:
             self.weights = weights
 
-    def 
+    def sample(self) -> Tuple[np.ndarray, np.ndarray]:
+        
+        time, latent = self.gp.sample(self.T, self.dt, self.dt_sample, self.seed)
+
+        # Compute firing rates
+        rates = latent @ self.weights  # Shape: (num_steps, num_neurons)
+
+        # Apply non-linearity
+        if self.non_linearity == "exponential":
+            rates = np.exp(rates)
+        elif self.non_linearity == "relu":
+            rates = np.maximum(0, rates)
+        else:
+            raise ValueError(f"Unsupported non-linearity: {self.non_linearity}")
+
+        # Scale to max firing rate
+        rates = rates / np.max(rates) * self.max_firing_rate
+
+        # Sample spike counts from Poisson distribution
+        rng = np.random.default_rng(self.seed)
+        spike_counts = rng.poisson(rates * self.dt)
+
+        return time, spike_counts
 
 class GaussianProcess:
     """
