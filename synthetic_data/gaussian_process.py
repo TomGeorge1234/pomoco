@@ -1,63 +1,73 @@
 from typing import Dict, Optional, Tuple
+import warnings
 import numpy as np
-from generator import Generator
+from synthetic_data.generator import Generator
 
-class GaussianProcessSpikeCount(Generator):
+class GPSpikeGenerator(Generator):
     """
     A generator class for producing spike count data from a Gaussian Process (GP) latent model.
     """
     def __init__(
         self,
+        # GP parameters 
         latent_dim: int,
+        latent_timescale: float,
         kernel_type: str = "rbf",
         kernel_params: Optional[Dict[str, float]] = None,
-        max_firing_rate: float = 50.0,
-        non_linearity: str = "exponential",
+        dt: float = 0.1,
+        # Neuron parameters 
+        median_firing_rate: float = 20.0,
         num_neurons: int = 100,
         weights = None,
-    ) -> None:
+        ) -> None:
         
         super().__init__()
-
         self.gp = GaussianProcess(latent_dim, kernel_type, kernel_params)
-        
         if weights is not None: 
-            assert weights.shape = (latent_dim, num_neurons)
+            assert weights.shape == (latent_dim, num_neurons)
             self.weights = weights
         else: 
-            weights = self.create_weight_matrix(num_neurons, latent_dim)
-
-        self.max_firing_rate = max_firing_rate
-        self.non_linearity = non_linearity
+            self.weights = np.random.randn(latent_dim, num_neurons)
+        self.median_firing_rate = median_firing_rate
         self.num_neurons = num_neurons
-        if weights is None:
-            self.weights = self.create_weight_matrix(num_neurons, dim)
-        else:
-            self.weights = weights
+        self.dt = dt
+        if dt > latent_timescale / 5: 
+            warnings.warn("dt is larger compared to the latent timescale.")
+        self.dt_sample = max(latent_timescale / 10.0,dt)  # Sample at a finer resolution than the timescale
 
-    def sample(self) -> Tuple[np.ndarray, np.ndarray]:
-        
-        time, latent = self.gp.sample(self.T, self.dt, self.dt_sample, self.seed)
+    def sample(
+            self,
+            total_time: float,
+            ) -> Tuple[np.ndarray, np.ndarray]:
 
-        # Compute firing rates
-        rates = latent @ self.weights  # Shape: (num_steps, num_neurons)
+        # Sample latent from GP
+        time, latents = self.gp.sample(
+            total_time=total_time,
+            dt=self.dt,
+            dt_sample=self.dt_sample, 
+            seed = None,)
 
-        # Apply non-linearity
-        if self.non_linearity == "exponential":
-            rates = np.exp(rates)
-        elif self.non_linearity == "relu":
-            rates = np.maximum(0, rates)
-        else:
-            raise ValueError(f"Unsupported non-linearity: {self.non_linearity}")
+        # Compute firing rates: z_i ~ N(0,1), W_ij ~ N(0,1) => logrates ~ N(0, num_latents)
+        logrates =  latents @ self.weights  # ~ N(0, latent_dim)
+        logrates = logrates / np.sqrt(self.gp.dim)  # ~ N(0,1)
+        print(f"Checking distribution of normalized logrates: mean={logrates.mean():.2f}, std={logrates.std():.2f}")
+        rates = np.exp(0.3 * logrates) # ~ lnN(0,1) 
+        rates = self.median_firing_rate * rates # ~ lnN(ln(median_fr),1)
+        print(f"Checking distribution of lognormalize rates: median={np.median(rates):.2f}, std={rates.std():.2f}")
 
-        # Scale to max firing rate
-        rates = rates / np.max(rates) * self.max_firing_rate
+        # Sample spike counts and times
+        lam = rates * self.dt  # shape: (num_timepoints, num_neurons)
+        spike_counts = np.random.poisson(lam)  # shape: (num_timepoints, num_neurons)
 
-        # Sample spike counts from Poisson distribution
-        rng = np.random.default_rng(self.seed)
-        spike_counts = rng.poisson(rates * self.dt)
+        # Extract sample individual spikes; return times and unit ids
+        t_ids, n_ids = np.nonzero(spike_counts)
+        counts_for_nonzero_bins = spike_counts[t_ids, n_ids]
 
-        return time, spike_counts
+        spike_unit_ids = np.repeat(n_ids, counts_for_nonzero_bins)
+        base_spike_times = np.repeat(time[t_ids], counts_for_nonzero_bins)
+        spike_times = base_spike_times + np.random.uniform(0, self.dt, size=base_spike_times.shape)
+        return time, latents, spike_counts, spike_times, spike_unit_ids
+
 
 class GaussianProcess:
     """
@@ -94,7 +104,7 @@ class GaussianProcess:
 
     def sample(
         self, 
-        T: float, 
+        total_time: float,  # what's a better name for this parameter...
         dt: float, 
         dt_sample: Optional[float] = None, 
         seed: int = 0
@@ -107,7 +117,7 @@ class GaussianProcess:
         Note: this dt_sample should be smaller than the length scale of the kernel for accurate results.
 
         Args:
-            T: The total duration of the simulation in seconds.
+            total_time: The total duration of the simulation in seconds.
             dt: The target time step for the output array.
             dt_sample: The time step used for the internal covariance sampling. 
                        If None, defaults to `dt`. Larger values are faster but less accurate.
@@ -122,8 +132,8 @@ class GaussianProcess:
         rng = np.random.default_rng(seed)
 
         dt_sample = dt_sample or dt
-        num_samples = int(T / dt_sample) + 1
-        time_sample = np.linspace(0, T, num_samples)
+        num_samples = int(total_time / dt_sample) + 1
+        time_sample = np.linspace(0, total_time, num_samples)
 
         # Compute covariance matrix using the kernel function
         # Shape: (num_samples, num_samples)
@@ -140,8 +150,8 @@ class GaussianProcess:
         ).T
 
         # Interpolate to the target time base
-        num_steps = int(T / dt) + 1
-        time = np.linspace(0, T, num_steps)
+        num_steps = int(total_time / dt) + 1
+        time = np.linspace(0, total_time, num_steps)
         
         # Initialize output array
         latent = np.zeros((num_steps, self.dim))

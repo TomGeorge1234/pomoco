@@ -1,7 +1,6 @@
 import torch
-from typing import Optional
+from typing import Optional, List
 from synthetic_data.generator import Generator
-from synthetic_data.synthetic_data_generator import generator
 import numpy as np
 
 class Dataset(torch.utils.data.IterableDataset):
