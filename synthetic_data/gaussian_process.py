@@ -1,6 +1,38 @@
 from typing import Dict, Optional, Tuple
 import numpy as np
-from synthetic_data.kernels import KERNELS
+from generator import Generator
+
+class GaussianProcessSpikeCount(Generator):
+    """
+    A generator class for producing spike count data from a Gaussian Process (GP) latent model.
+    """
+    def __init__(
+        self,
+        latent_dim: int,
+        kernel_type: str = "rbf",
+        kernel_params: Optional[Dict[str, float]] = None,
+        max_firing_rate: float = 50.0,
+        non_linearity: str = "exponential",
+        num_neurons: int = 100,
+        weights = None,
+    ) -> None:
+        
+        super().__init__()
+
+        self.gp = GaussianProcess(latent_dim, kernel_type, kernel_params)
+        
+        if weights is not None: 
+            assert weights.shape = (latent_dim, num_neurons)
+
+        self.max_firing_rate = max_firing_rate
+        self.non_linearity = non_linearity
+        self.num_neurons = num_neurons
+        if weights is None:
+            self.weights = self.create_weight_matrix(num_neurons, dim)
+        else:
+            self.weights = weights
+
+    def 
 
 class GaussianProcess:
     """
@@ -23,18 +55,6 @@ class GaussianProcess:
         kernel_type: str = "rbf", 
         kernel_params: Optional[Dict[str, float]] = None
     ) -> None:
-        """
-        Initializes the GaussianProcess generator.
-
-        Args:
-            dim: The number of independent dimensions to sample.
-            kernel_type: The key for the kernel in the KERNELS dictionary. Defaults to "rbf".
-            kernel_params: A dictionary of parameters for the kernel function. 
-                           Defaults to an empty dict if None.
-
-        Raises:
-            ValueError: If the provided kernel_type is not found in KERNELS.
-        """
         self.dim = dim
         self.kernel_type = kernel_type
         self.kernel_params = kernel_params if kernel_params is not None else {}
@@ -58,8 +78,8 @@ class GaussianProcess:
         Samples trajectories from the Gaussian Process.
 
         This method first samples the GP at a coarser time resolution (`dt_sample`) 
-        to reduce the computational cost of the covariance matrix decomposition, 
-        and then linearly interpolates the result to the target resolution (`dt`).
+        to reduce the computational cost then linearly interpolates the result to the target resolution (`dt`).
+        Note: this dt_sample should be smaller than the length scale of the kernel for accurate results.
 
         Args:
             T: The total duration of the simulation in seconds.
@@ -107,6 +127,42 @@ class GaussianProcess:
             latent[:, i] = np.interp(time, time_sample, latent_process_samples[:, i])
 
         return time, latent
+    
+
+def rbf_kernel(x1, x2, params):
+    tau = params.get("tau", 1.0)
+    # Broadcasting: (N, 1) - (1, M) -> (N, M)
+    diff = (x1[:, None] - x2[None, :]) / tau
+    return np.exp(-0.5 * diff**2)
+
+def matern_kernel(x1, x2, params):
+    tau = params.get("tau", 1.0)
+    nu = params.get("nu", 1.5)
+    dist = np.abs(x1[:, None] - x2[None, :]) / tau
+    
+    if nu == 0.5:
+        return np.exp(-dist)
+    elif nu == 1.5:
+        sqrt3_dist = np.sqrt(3) * dist
+        return (1 + sqrt3_dist) * np.exp(-sqrt3_dist)
+    elif nu == 2.5:
+        sqrt5_dist = np.sqrt(5) * dist
+        return (1 + sqrt5_dist + 5 / 3 * dist**2) * np.exp(-sqrt5_dist)
+    else:
+        raise NotImplementedError(
+            "Only nu=0.5, 1.5, 2.5 are implemented for Matern kernel"
+        )
+
+def periodic_kernel(x1, x2, params):
+    tau = params.get("tau", 1.0)
+    period = params.get("period", 1.0)
+    dist = np.abs(x1[:, None] - x2[None, :])
+    return np.exp(-2 * (np.sin(np.pi * dist / period) / tau) ** 2)
+
+KERNELS = {"rbf": rbf_kernel, "matern": matern_kernel, "periodic": periodic_kernel}
+
+
+
 
 
 # Example usage
