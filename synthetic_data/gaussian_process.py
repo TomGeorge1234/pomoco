@@ -50,14 +50,13 @@ class GPSpikeGenerator(Generator):
         # Compute firing rates: z_i ~ N(0,1), W_ij ~ N(0,1) => logrates ~ N(0, num_latents)
         logrates =  latents @ self.weights  # ~ N(0, latent_dim)
         logrates = logrates / np.sqrt(self.gp.dim)  # ~ N(0,1)
-        print(f"Checking distribution of normalized logrates: mean={logrates.mean():.2f}, std={logrates.std():.2f}")
-        rates = np.exp(0.3 * logrates) # ~ lnN(0,1) 
-        rates = self.median_firing_rate * rates # ~ lnN(ln(median_fr),1)
-        print(f"Checking distribution of lognormalize rates: median={np.median(rates):.2f}, std={rates.std():.2f}")
+        firing_rates = np.exp(0.3 * logrates) # ~ lnN(0,1) 
+        firing_rates = self.median_firing_rate * firing_rates # ~ lnN(ln(median_fr),1)
 
         # Sample spike counts and times
-        lam = rates * self.dt  # shape: (num_timepoints, num_neurons)
-        spike_counts = np.random.poisson(lam)  # shape: (num_timepoints, num_neurons)
+        lam = firing_rates * self.dt # shape: (num_timepoints, num_neurons)
+        # sample as float 
+        spike_counts = np.random.poisson(lam) # shape: (num_timepoints, num_neurons)
 
         # Extract sample individual spikes; return times and unit ids
         t_ids, n_ids = np.nonzero(spike_counts)
@@ -66,7 +65,16 @@ class GPSpikeGenerator(Generator):
         spike_unit_ids = np.repeat(n_ids, counts_for_nonzero_bins)
         base_spike_times = np.repeat(time[t_ids], counts_for_nonzero_bins)
         spike_times = base_spike_times + np.random.uniform(0, self.dt, size=base_spike_times.shape)
-        return time, latents, rates, spike_counts, spike_times, spike_unit_ids
+
+        data_dict = {
+            "time": time,
+            "latents": latents,
+            "firing_rates": firing_rates,
+            "spike_counts": spike_counts.astype(np.float32),
+            "spike_times": spike_times,
+            "spike_unit_ids": spike_unit_ids,
+        }
+        return data_dict
 
 
 class GaussianProcess:

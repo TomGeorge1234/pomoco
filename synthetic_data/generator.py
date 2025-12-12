@@ -2,7 +2,7 @@ class Generator():
     """
     The generator class is a base class for all data generators.
     It defines the common method `sample` that all generators should implement.
-    sample() returns a single trial's worth of data comprising times, latents, spikes.
+    sample() returns a single trial's worth of data comprising times, latents, spikes in a dict.
     """
     def __init__(self):
         pass
@@ -12,8 +12,6 @@ class Generator():
         Samples data from the generator.
 
         Returns:
-            time (np.ndarray): Array of time points.
-            latents (np.ndarray): Array of latent variable values.
-            spike_counts (np.ndarray): Array of spike counts.
+            dict: A dictionary containing the sampled data.
         """
         raise NotImplementedError("The sample method must be implemented by subclasses.")

@@ -48,7 +48,7 @@ class MultiSetRNN(nn.Module):
         """
         x: (Batch, Time, Neurons)
         dataset_indices: (Batch) - Integer IDs of which dataset each sample belongs to
-        """
+        """        
         batch_size, seq_len, _num_neurons = x.size()
         
         # Prepare a placeholder for the embedded input
