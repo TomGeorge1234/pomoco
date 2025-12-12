@@ -11,7 +11,6 @@ class GPSpikeGenerator(Generator):
         self,
         # GP parameters 
         latent_dim: int,
-        latent_timescale: float,
         kernel_type: str = "rbf",
         kernel_params: Optional[Dict[str, float]] = None,
         dt: float = 0.1,
@@ -31,6 +30,7 @@ class GPSpikeGenerator(Generator):
         self.median_firing_rate = median_firing_rate
         self.num_neurons = num_neurons
         self.dt = dt
+        latent_timescale = kernel_params.get("tau", 1.0)
         if dt > latent_timescale / 5: 
             warnings.warn("dt is larger compared to the latent timescale.")
         self.dt_sample = max(latent_timescale / 10.0,dt)  # Sample at a finer resolution than the timescale
@@ -66,7 +66,7 @@ class GPSpikeGenerator(Generator):
         spike_unit_ids = np.repeat(n_ids, counts_for_nonzero_bins)
         base_spike_times = np.repeat(time[t_ids], counts_for_nonzero_bins)
         spike_times = base_spike_times + np.random.uniform(0, self.dt, size=base_spike_times.shape)
-        return time, latents, spike_counts, spike_times, spike_unit_ids
+        return time, latents, rates, spike_counts, spike_times, spike_unit_ids
 
 
 class GaussianProcess:
