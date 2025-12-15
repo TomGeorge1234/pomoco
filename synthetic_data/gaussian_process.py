@@ -27,13 +27,15 @@ class GPSpikeGenerator(Generator):
             self.weights = weights
         else: 
             self.weights = np.random.randn(latent_dim, num_neurons)
-        self.median_firing_rate = median_firing_rate
-        self.num_neurons = num_neurons
-        self.dt = dt
         latent_timescale = kernel_params.get("tau", 1.0)
         if dt > latent_timescale / 5: 
             warnings.warn("dt is larger compared to the latent timescale.")
         self.dt_sample = max(latent_timescale / 10.0,dt)  # Sample at a finer resolution than the timescale
+
+        self.median_firing_rate = median_firing_rate
+        self.num_neurons = num_neurons
+        self.latent_dim = latent_dim
+        self.dt = dt
 
     def sample(
             self,
@@ -112,7 +114,7 @@ class GaussianProcess:
 
     def sample(
         self, 
-        total_time: float,  # what's a better name for this parameter...
+        total_time: float,  
         dt: float, 
         dt_sample: Optional[float] = None, 
         seed: int = 0
