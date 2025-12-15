@@ -7,41 +7,26 @@ class Dataset(torch.utils.data.IterableDataset):
 
     def __init__(
         self,
-        data_generators: List[Generator],
+        data_generators: Generator,
         trial_length: float = 10.0,
     ):
         super().__init__()
 
-        self.num_sets = len(data_generators)
         self.data_generators = data_generators
         self.trial_length = trial_length
-
-        #TODO create a dict storing info for each dataset and a hash to identify them
 
 
     def __iter__(
         self,
     ):
         while True:
-            # randomly select a dataset
-            dataset_idx = np.random.randint(0, self.num_sets)
-            generator = self.data_generators[dataset_idx]
-
-            data_dict = generator.sample(
-                total_time=self.trial_length,
-            )
-            time, latents, spike_counts = data_dict['time'], data_dict['latents'], data_dict['spike_counts']
-
+            data_dict = self.data_generators.sample(total_time=self.trial_length,)
             yield_dict = {
-                'time': time,
-                'latents': latents,
-                'spike_counts': spike_counts,
-                'dataset_idx': dataset_idx,
+                'time': data_dict['time'],
+                'latents': data_dict['latents'],
+                'spike_counts': data_dict['spike_counts'],
             }
-
             yield yield_dict
-
-
 
 
 if __name__ == "__main__":
