@@ -22,73 +22,40 @@ class BidirectionalLSTM(nn.Module):
         return lstm_out, (hidden, cell)
 
 
-
 class MultiSetRNN(nn.Module):
-    def __init__(self, num_sets, input_size, hidden_size, latent_dim):
+    def __init__(self, hidden_size):
         super().__init__()
+        self.hidden_size = hidden_size
+        self.input_heads = nn.ModuleDict()
+        self.output_heads = nn.ModuleDict()
         
-        # 1. Dataset-Specific Input Encoders
-        # We store them in a ModuleList so PyTorch registers the parameters
-        # Each maps: [num_neurons] -> [hidden_size] (or an intermediate embedding size)
-        self.encoders = nn.ModuleList([
-            nn.Linear(input_size, hidden_size) for _ in range(num_sets)
-        ])
-        
-        # 2. Shared Backbone
-        self.lstm_backbone = BidirectionalLSTM(
-            input_size=hidden_size, # RNN takes the encoded embedding
-            hidden_size=hidden_size
-        )
-        
-        # 3. Shared Readout/Decoder
-        # Maps RNN output (hidden_size * 2 due to bidirectional) -> latents
-        self.readout = nn.Linear(hidden_size * 2, latent_dim)
+        self.lstm_backbone = nn.LSTM(hidden_size, hidden_size, batch_first=True, bidirectional=True)
+        self.shared_proj = nn.Linear(hidden_size * 2, hidden_size)
 
-    def forward(self, x, dataset_indices):
-        """
-        x: (Batch, Time, Neurons)
-        dataset_indices: (Batch) - Integer IDs of which dataset each sample belongs to
-        """        
-        batch_size, seq_len, _num_neurons = x.size()
-        
-        # Prepare a placeholder for the embedded input
-        # Shape: (Batch, Time, Hidden_Size)
-        embedding_output = torch.zeros(
-            batch_size, seq_len, self.encoders[0].out_features, 
-            device=x.device
-        )
+    def add_dataset(self, dataset_id, input_size, output_size):
+        sid = str(dataset_id)
+        self.input_heads[sid] = nn.Linear(input_size, self.hidden_size)
+        self.output_heads[sid] = nn.Linear(self.hidden_size, output_size)
 
-        # ---------------------------------------------------------
-        # ROUTING LOGIC:
-        # Since a batch is mixed, we iterate through the unique set IDs 
-        # present in this batch and apply the specific layer to relevant samples.
-        # ---------------------------------------------------------
-        unique_sets = torch.unique(dataset_indices)
+    def forward(self, x, dataset_id):
+        # dataset_id is now a SINGLE value, not a tensor of IDs
+        sid = str(dataset_id)
         
-        for set_id in unique_sets:
-            # Create a boolean mask for items belonging to this set
-            mask = (dataset_indices == set_id)
-            
-            # Select inputs for this set
-            # x[mask] shape becomes (Num_Samples_in_Set, Time, Neurons)
-            subset_input = x[mask]
-            
-            # Pass through the specific encoder for this set
-            subset_embedded = self.encoders[set_id](subset_input)
-            
-            # Place result back into the main storage tensor
-            embedding_output[mask] = subset_embedded
-
-        # 4. Pass combined embeddings through Shared RNN
-        # rnn_out shape: (Batch, Time, Hidden*2)
-        rnn_out, _ = self.lstm_backbone(embedding_output)
+        # 1. Select Heads directly
+        input_layer = self.input_heads[sid]
+        output_layer = self.output_heads[sid]
         
-        # 5. Pass through Shared Readout
-        predictions = self.readout(rnn_out)
+        # 2. Straight-line execution (No masking! No slicing!)
+        # x shape: [Batch, Time, Input_Size_Of_This_Dataset]
+        emb = input_layer(x)
+        
+        rnn_out, _ = self.lstm_backbone(emb)
+        shared_feats = self.shared_proj(rnn_out)
+        
+        predictions = output_layer(shared_feats)
         
         return predictions
-
-
+    
 
 # Example usage
 if __name__ == "__main__":

@@ -7,12 +7,12 @@ class Dataset(torch.utils.data.IterableDataset):
 
     def __init__(
         self,
-        data_generators: Generator,
+        data_generator: Generator,
         trial_length: float = 10.0,
     ):
         super().__init__()
 
-        self.data_generators = data_generators
+        self.data_generator = data_generator
         self.trial_length = trial_length
 
 
@@ -20,7 +20,9 @@ class Dataset(torch.utils.data.IterableDataset):
         self,
     ):
         while True:
-            data_dict = self.data_generators.sample(total_time=self.trial_length,)
+            data_dict = self.data_generator.sample(
+                total_time=self.trial_length,
+            )
             yield_dict = {
                 'time': data_dict['time'],
                 'latents': data_dict['latents'],
